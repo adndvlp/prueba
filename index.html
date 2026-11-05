@@ -1091,7 +1091,7 @@ const m9e = decideBranch;
           experimentID: "ed4b5582-5d7f-4724-9787-aec455e6811f",
           sessionId: trialSessionId,
           uid: Uid,
-          batchSize: 0,
+          batchSize: 1,
           ...(_preSessionName ? { sessionName: _preSessionName } : {})
         }),
       });
@@ -1312,10 +1312,10 @@ const m9e = decideBranch;
     
     // --- Configuración de Batching (cargada desde Firestore) ---
     const BATCH_CONFIG = {
-      size: 0,
+      size: 1,
       currentBatchNumber: 0,
-      resumeTimeoutMinutes: 30,
-      useIndexedDB: true
+      resumeTimeoutMinutes: 1,
+      useIndexedDB: false
     };
 
     // Inicializar IndexedDB solo si está habilitado
