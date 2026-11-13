@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><base href="./publications/14909ff3784c8cdd8d15fb429c58b46c6ce9899388d6817458198a3fdcd727a8/">
+<!DOCTYPE html><html lang="en"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
@@ -548,8 +548,10 @@ const J8e = decideBranch;
       const manifest = currentManifest();
       const finished = decision.targetId === "FINISH_EXPERIMENT";
       const address = finished ? { enterLoopIds: [] } : resolveAddress(decision.targetId);
-      if (!manifest || !address || decision.experimentRevision !== manifest.revision) {
-        throw new Error('The saved navigation does not match this experiment revision');
+      // Authoring revisions also change for names and presentation. Validate
+      // the saved execution references against the current manifest instead.
+      if (!manifest || !address) {
+        throw new Error('The saved navigation destination does not match this experiment');
       }
       if (address.enterLoopIds.length < decision.loops.length ||
           decision.loops.some((frame, index) => address.enterLoopIds[index] !== frame.loopId)) {
@@ -561,17 +563,43 @@ const J8e = decideBranch;
           throw new Error('The saved timeline cursor is invalid');
         }
         for (const entry of state.entries) {
-          if (resolveAddress(entry.id)?.targetOwnerId !== ownerId ||
-              (entry.targetId && !resolveAddress(entry.targetId))) {
+          const entryAddress = resolveAddress(entry.id);
+          const target = entry.targetId == null ? null : resolveAddress(entry.targetId);
+          if (entryAddress?.targetOwnerId !== ownerId ||
+              (entry.targetId != null && (entryAddress.targetKind !== 'loop' ||
+                !target?.enterLoopIds.includes(String(entry.id))))) {
             throw new Error('The saved timeline destination is invalid');
           }
+        }
+        if (state.deferred && state.deferred.targetId !== 'FINISH_EXPERIMENT' &&
+            resolveAddress(state.deferred.targetId)?.targetKind !== 'trial') {
+          throw new Error('The saved timeline destination is invalid');
         }
       };
       validateQueue(decision.globalRouting.nativeTimeline, null);
       if (finished && decision.globalRouting.nativeTimeline.index !== decision.globalRouting.nativeTimeline.entries.length) {
         throw new Error('A finished route cannot contain future entries');
       }
-      for (const frame of decision.loops) validateQueue(frame.routing.nativeTimeline, frame.loopId);
+      for (const frame of decision.loops) {
+        const loop = definitions.get(frame.loopId);
+        if (loop?.kind !== 'loop' || !Array.isArray(loop.node.timeline_variables) ||
+            frame.order.length !== loop.node.timeline_variables.length ||
+            frame.order.some(index => index >= loop.node.timeline_variables.length)) {
+          throw new Error('The saved loop order does not match its stimuli');
+        }
+        // The generated getter validates saved repetitions before any trial runs.
+        void loop.node.repetitions;
+        validateQueue(frame.routing.nativeTimeline, frame.loopId);
+      }
+      if (!finished) {
+        const queues = [decision.globalRouting.nativeTimeline, ...decision.loops.map(frame => frame.routing.nativeTimeline)];
+        for (const [depth, queue] of queues.entries()) {
+          const expected = address.enterLoopIds[depth] ?? String(decision.targetId);
+          if (queue.entries[queue.index]?.id !== expected) {
+            throw new Error('The saved timeline cursor does not reach its destination');
+          }
+        }
+      }
     };
     const acknowledgeBranch = data => {
       const request = pendingBranch;
@@ -658,8 +686,13 @@ const J8e = decideBranch;
       }
       return frame.order.slice(frame.cursor);
     };
-    const remainingLoopRepetitions = (loopId, repetitions) =>
-      Math.max(0, repetitions - (restoredLoops.get(String(loopId))?.repetition ?? 0));
+    const remainingLoopRepetitions = (loopId, repetitions) => {
+      const saved = restoredLoops.get(String(loopId));
+      if (saved && saved.repetition >= repetitions) {
+        throw new Error('The saved loop repetition no longer exists');
+      }
+      return repetitions - (saved?.repetition ?? 0);
+    };
     const startLoop = (loopId, readRouting, writeRouting) => {
       const key = String(loopId);
       const frame = preparedLoops.get(key);
@@ -928,7 +961,7 @@ const J8e = decideBranch;
     const registerTrial = (id, node) => definitions.set(String(id), { kind: 'trial', node });
     const registerLoop = (id, node, metadata) => definitions.set(String(id), { kind: 'loop', node, metadata });
     const attach = (jsPsych, timeline) => {
-      if (!definitions.size) return;
+      if (!definitions.size && !deferredResume) return;
       if (!currentManifest()?.scopes) throw new Error('Unsupported execution manifest');
       nativeRuntime = jsPsych;
       nativeResume = deferredResume;
@@ -1144,30 +1177,13 @@ const J8e = decideBranch;
 
   
   const _PUBLIC_PUBLICATION_CONFIG = {"batchConfig":{"useIndexedDB":true,"batchSize":1,"resumeTimeoutMinutes":1},"recruitmentConfig":{"platform":"none","prolificCompletionCode":""},"captchaConfig":{"enabled":false,"provider":"hcaptcha","siteKey":""}};
-  const _PUBLIC_PUBLICATION_ID = '14909ff3784c8cdd8d15fb429c58b46c6ce9899388d6817458198a3fdcd727a8';
-  const _PUBLIC_EXECUTION_REVISION = '43d853372330b3a1b97945b37e9ac75ed50f5e8e6606894abf245da63a134ddd';
-  
-  function _publicEntryLocation(fallback) {
-    const base = new URL(document.baseURI);
-    const segment = '/publications/' + encodeURIComponent(_PUBLIC_PUBLICATION_ID) + '/';
-    const index = base.pathname.lastIndexOf(segment);
-    // Both the mutable entry's <base> and immutable HTML identify the current
-    // publication directory. Preserve its origin, including a custom domain,
-    // so IndexedDB and active/recovery references stay accessible.
-    if (index >= 0) return new URL(base.pathname.slice(0, index + 1), base.origin);
-    return new URL(fallback || window.location.href);
-  }
-  function _publicArtifactLocation(state) {
-    return new URL('publications/' + encodeURIComponent(state.publicationId) + '/index.html', _publicEntryLocation(state.entryUrl));
-  }
-
   const _publicWriter = { connectionId: crypto.randomUUID(), writeToken: crypto.randomUUID() + crypto.randomUUID(), connectionGeneration: 0 };
   async function createSession(action = 'createSession', renewConnection = false) {
     const sessionName = !_sessionNameHasDynamic() ? _generateSessionName(null) : null;
     const response = await fetch("https://us-central1-test-e4cf9.cloudfunctions.net/apiData", {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action, experimentID: "ed4b5582-5d7f-4724-9787-aec455e6811f", sessionId: trialSessionId,
-        sessionProtocolVersion: 3, publicationId: _PUBLIC_PUBLICATION_ID, executionRevision: _PUBLIC_EXECUTION_REVISION,
+        sessionProtocolVersion: 3,
         ..._publicWriter, renewConnection, metadata, ...(sessionName && { sessionName }) })
     });
     const result = await response.json();
@@ -1355,12 +1371,6 @@ const J8e = decideBranch;
   (async () => {
     _setLoadingMsg('Creating session…');
     let _publicSessionState = await createSession();
-    if (_publicSessionState.decision === 'revision_mismatch') {
-      if (!_publicSessionState.artifactUrl) throw new Error('The original publication is unavailable. Your pending responses are preserved.');
-      const destination = _publicArtifactLocation(_publicSessionState);
-      destination.search = window.location.search; destination.hash = window.location.hash;
-      window.location.replace(destination.href); return;
-    }
     if (_publicSessionState.decision && !['resume_allowed', 'session_expired', 'session_completed'].includes(_publicSessionState.decision)) {
       throw new Error('Session cannot resume: ' + _publicSessionState.decision + '. Your pending responses are preserved.');
     }
@@ -1406,10 +1416,7 @@ const J8e = decideBranch;
         localStorage.removeItem(_publicStorageKeys.participant);
         localStorage.removeItem(_publicStorageKeys.resumeTrial);
         sessionStorage.removeItem(_publicStorageKeys.captchaPassed);
-        const target = typeof _publicEntryLocation === 'function' ? _publicEntryLocation(_publicSessionState.entryUrl)
-          : new URL(_publicSessionState.entryUrl || window.location.href);
-        target.search = window.location.search; target.hash = window.location.hash;
-        window.location.assign(target.href);
+        window.location.reload();
       };
       panel.append(document.createElement('br'), button);
     }
@@ -1595,7 +1602,16 @@ const J8e = decideBranch;
     const _mturkTurkSubmitTo = _urlParams.get('turkSubmitTo');
     const _mturkIsPreview = _mturkAssignmentID === 'ASSIGNMENT_ID_NOT_AVAILABLE';
 
-    
+    const effectiveRecruitment = _publicSessionState.configuration?.recruitmentConfig || {"platform":"none","prolificCompletionCode":""};
+    // MTurk preview mode: block experiment from starting
+    if (effectiveRecruitment.platform === 'mturk' && _mturkIsPreview) {
+      document.getElementById('jspsych-container').innerHTML =
+        '<div style="padding:40px;text-align:center;font-family:sans-serif">' +
+        '<h2>Preview</h2>' +
+        '<p>Accept the HIT to start the experiment.</p>' +
+        '</div>';
+      return;
+    }
 
     const pendingBatchSaves = [];
 
@@ -1934,9 +1950,31 @@ const J8e = decideBranch;
 
         publicFinished = true;
         // --- Recruitment platform redirect ---
-        
-        
-        _showSuccess();
+        const recruitment = _publicSessionState.configuration?.recruitmentConfig || {"platform":"none","prolificCompletionCode":""};
+        if (recruitment.platform === 'prolific') {
+        if (_prolificPID && recruitment.prolificCompletionCode) {
+          _setLoadingMsg('Redirecting to Prolific…');
+          await new Promise(r => setTimeout(r, 300));
+          window.location.href = 'https://app.prolific.com/submissions/complete?cc=' + encodeURIComponent(recruitment.prolificCompletionCode);
+        } else {
+          // No Prolific URL params — testing mode or direct access
+          _showSuccess();
+        }
+        } else if (recruitment.platform === 'mturk') {
+        if (_mturkTurkSubmitTo && _mturkAssignmentID && !_mturkIsPreview) {
+          _setLoadingMsg('Submitting to MTurk…');
+          const _mturkForm = document.createElement('form');
+          _mturkForm.method = 'POST';
+          _mturkForm.action = _mturkTurkSubmitTo + '/mturk/externalSubmit';
+          _mturkForm.innerHTML = '<input name="assignmentId" value="' + _mturkAssignmentID + '">';
+          document.body.appendChild(_mturkForm);
+          _mturkForm.submit();
+        } else {
+          _showSuccess();
+        }
+        } else {
+          _showSuccess();
+        }
         })();
         try { await publicFinishInFlight; } finally { publicFinishInFlight = null; }
       }
@@ -1946,7 +1984,17 @@ const J8e = decideBranch;
     // Uncomment to see the json results after finishing a session experiment
     // jsPsych.data.displayData('csv');
 
-    
+    if (['prolific', 'mturk'].includes((_publicSessionState.configuration?.recruitmentConfig || {"platform":"none","prolificCompletionCode":""}).platform)) {
+    // Add platform IDs to all trials automatically (after initJsPsych)
+    jsPsych.data.addProperties({
+      prolific_pid: _prolificPID || "",
+      prolific_study_id: _prolificStudyID || "",
+      prolific_session_id: _prolificSessionID || "",
+      mturk_worker_id: _mturkWorkerID || "",
+      mturk_assignment_id: _mturkAssignmentID || "",
+      mturk_hit_id: _mturkHitID || "",
+    });
+    }
 
     if (typeof _recoverOlderPublicSessions === 'function') _recoverOlderPublicSessions().catch(error => {
       console.error('Earlier responses retained for recovery:', error);
