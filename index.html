@@ -467,16 +467,16 @@
   
   
   {
-    const readBranchRuleValue = function uF(n,e){let t=e.column||"";if(!t&&e.componentIdx&&e.prop?t=`${e.componentIdx}_${e.prop}`:!t&&e.prop&&(t=e.prop),!t)return;if(n[t]!==void 0)return n[t];const r=t.split("_");if(r.length<2)return;const i=r[r.length-1],s=`${r.slice(0,-1).join("_")}_response`,a=n[s];if(!(!a||typeof a!="object"||Array.isArray(a)))return a[i]};
-const compareBranchValue = function cF(n,e){if(Array.isArray(n)){const s=n.includes(e.value)||n.includes(String(e.value));return e.op==="=="?s:e.op==="!="?!s:!1}const t=Number.parseFloat(String(n)),r=Number.parseFloat(String(e.value)),i=!Number.isNaN(t)&&!Number.isNaN(r);switch(e.op){case"==":return i?t===r:String(n)===String(e.value);case"!=":return i?t!==r:String(n)!==String(e.value);case">":return i&&t>r;case"<":return i&&t<r;case">=":return i&&t>=r;case"<=":return i&&t<=r;default:return!1}};
-const evaluateBranchCondition = function $de(n,e){return Array.isArray(e.rules)?e.rules.every(t=>{const r=uF(n,t);return r!==void 0&&cF(r,t)}):!1};
-const findLatestTrialData = function Qde(n,e){for(let t=n.length-1;t>=0;t-=1){const r=n[t];if([r.builder_id,r.trial_id,r.loop_id].some(s=>String(s)===String(e)))return r}return null};
-const evaluateReferencedCondition = function X8e(n,e){return Array.isArray(e.rules)?e.rules.every(t=>{if(t.trialId===null||t.trialId===void 0)return!1;const r=Qde(n,t.trialId);if(!r)return!1;const i=uF(r,t);return i!==void 0&&cF(i,t)}):!1};
-const decideBranch = function J8e(n,e,t,r){const i=s=>{if(s!=null&&s!=="FINISH_EXPERIMENT"&&!e.some(a=>String(a)===String(s)))throw new Error("Branch destination has no configured connection")};i(r);for(const s of t)if(i(s.nextTrialId),!!$de(n,s))return{targetId:s.nextTrialId??null,conditionId:s.id??null,customParameters:s.customParameters??null,usedDefault:!1};return{targetId:r,conditionId:null,customParameters:null,usedDefault:!0}};
-const uF = readBranchRuleValue;
-const cF = compareBranchValue;
-const $de = evaluateBranchCondition;
-const Qde = findLatestTrialData;
+    const readBranchRuleValue = function lF(n,e){let t=e.column||"";if(!t&&e.componentIdx&&e.prop?t=`${e.componentIdx}_${e.prop}`:!t&&e.prop&&(t=e.prop),!t)return;if(n[t]!==void 0)return n[t];const r=t.split("_");if(r.length<2)return;const i=r[r.length-1],s=`${r.slice(0,-1).join("_")}_response`,a=n[s];if(!(!a||typeof a!="object"||Array.isArray(a)))return a[i]};
+const compareBranchValue = function uF(n,e){if(Array.isArray(n)){const s=n.includes(e.value)||n.includes(String(e.value));return e.op==="=="?s:e.op==="!="?!s:!1}const t=Number.parseFloat(String(n)),r=Number.parseFloat(String(e.value)),i=!Number.isNaN(t)&&!Number.isNaN(r);switch(e.op){case"==":return i?t===r:String(n)===String(e.value);case"!=":return i?t!==r:String(n)!==String(e.value);case">":return i&&t>r;case"<":return i&&t<r;case">=":return i&&t>=r;case"<=":return i&&t<=r;default:return!1}};
+const evaluateBranchCondition = function Wde(n,e){return Array.isArray(e.rules)?e.rules.every(t=>{const r=lF(n,t);return r!==void 0&&uF(r,t)}):!1};
+const findLatestTrialData = function Gde(n,e){for(let t=n.length-1;t>=0;t-=1){const r=n[t];if([r.builder_id,r.trial_id,r.loop_id].some(s=>String(s)===String(e)))return r}return null};
+const evaluateReferencedCondition = function X8e(n,e){return Array.isArray(e.rules)?e.rules.every(t=>{if(t.trialId===null||t.trialId===void 0)return!1;const r=Gde(n,t.trialId);if(!r)return!1;const i=lF(r,t);return i!==void 0&&uF(i,t)}):!1};
+const decideBranch = function J8e(n,e,t,r){const i=s=>{if(s!=null&&s!=="FINISH_EXPERIMENT"&&!e.some(a=>String(a)===String(s)))throw new Error("Branch destination has no configured connection")};i(r);for(const s of t)if(i(s.nextTrialId),!!Wde(n,s))return{targetId:s.nextTrialId??null,conditionId:s.id??null,customParameters:s.customParameters??null,usedDefault:!1};return{targetId:r,conditionId:null,customParameters:null,usedDefault:!0}};
+const lF = readBranchRuleValue;
+const uF = compareBranchValue;
+const Wde = evaluateBranchCondition;
+const Gde = findLatestTrialData;
 const X8e = evaluateReferencedCondition;
 const J8e = decideBranch;
     window.ExpBuilderBranching = {
@@ -1176,7 +1176,7 @@ const J8e = decideBranch;
   let participantNumber;
 
   
-  const _PUBLIC_PUBLICATION_CONFIG = {"batchConfig":{"useIndexedDB":true,"batchSize":1,"resumeTimeoutMinutes":1},"recruitmentConfig":{"platform":"none","prolificCompletionCode":""},"captchaConfig":{"enabled":false,"provider":"hcaptcha","siteKey":""}};
+  const _publicSettingsError = function Kde(n){if(!n||typeof n!="object"||Array.isArray(n))return"Complete public settings are required.";function e(a,o){return a!==null&&typeof a=="object"&&!Array.isArray(a)&&Object.keys(a).length===o.length&&Object.keys(a).every(l=>o.includes(l))}const t=(a,o,l)=>typeof a=="number"&&Number.isSafeInteger(a)&&a>=o&&a<=l,{batchConfig:r,recruitmentConfig:i,captchaConfig:s}=n;return e(r,["useIndexedDB","batchSize","resumeTimeoutMinutes"])?typeof r.useIndexedDB!="boolean"?"Use IndexedDB must be a boolean.":t(r.batchSize,0,Number.MAX_SAFE_INTEGER)?t(r.resumeTimeoutMinutes,1,1440)?e(i,["platform","prolificCompletionCode"])?typeof i.platform!="string"||!["none","prolific","mturk"].includes(i.platform)?"Recruitment platform must be none, prolific or mturk.":typeof i.prolificCompletionCode!="string"?"Prolific Completion Code must be a string.":e(s,["enabled","provider","siteKey"])?typeof s.enabled!="boolean"?"CAPTCHA enabled must be a boolean.":typeof s.provider!="string"||!["hcaptcha","recaptcha"].includes(s.provider)?"CAPTCHA provider must be hcaptcha or recaptcha.":typeof s.siteKey!="string"?"CAPTCHA Site Key must be a string.":s.enabled&&!s.siteKey.trim()?"CAPTCHA Site Key is required when CAPTCHA is enabled.":null:"Complete CAPTCHA configuration is required.":"Complete recruitment configuration is required.":"Resume Timeout must be an integer from 1 to 1440 minutes.":"Batch Size must be a nonnegative safe integer.":"Complete batch configuration is required."};
   const _publicWriter = { connectionId: crypto.randomUUID(), writeToken: crypto.randomUUID() + crypto.randomUUID(), connectionGeneration: 0 };
   async function createSession(action = 'createSession', renewConnection = false) {
     const sessionName = !_sessionNameHasDynamic() ? _generateSessionName(null) : null;
@@ -1187,7 +1187,11 @@ const J8e = decideBranch;
         ..._publicWriter, renewConnection, metadata, ...(sessionName && { sessionName }) })
     });
     const result = await response.json();
-    if (result?.decision && result.sessionProtocolVersion === 3) return result;
+    if (result?.decision && result.sessionProtocolVersion === 3) {
+      const settingsError = _publicSettingsError(result.configuration);
+      if (settingsError) throw new Error('Invalid session settings: ' + settingsError);
+      return result;
+    }
     throw new Error(result?.message || 'This publication requires the current session service');
   }
 
@@ -1374,7 +1378,7 @@ const J8e = decideBranch;
     if (_publicSessionState.decision && !['resume_allowed', 'session_expired', 'session_completed'].includes(_publicSessionState.decision)) {
       throw new Error('Session cannot resume: ' + _publicSessionState.decision + '. Your pending responses are preserved.');
     }
-    const effectiveBatch = _publicSessionState.configuration?.batchConfig || {"useIndexedDB":true,"batchSize":1,"resumeTimeoutMinutes":1};
+    const effectiveBatch = _publicSessionState.configuration.batchConfig;
     const BATCH_CONFIG = { size: effectiveBatch.batchSize, useIndexedDB: effectiveBatch.useIndexedDB,
       resumeTimeoutMinutes: effectiveBatch.resumeTimeoutMinutes, currentBatchNumber: 0 };
     // Esperar e inicializar Firebase
@@ -1529,7 +1533,7 @@ const J8e = decideBranch;
     if (_publicSessionState.sessionProtocolVersion === 3) await _connectPublicSession();
 
 
-    const effectiveCaptcha = _publicSessionState.configuration?.captchaConfig || {"enabled":false,"provider":"hcaptcha","siteKey":""};
+    const effectiveCaptcha = _publicSessionState.configuration.captchaConfig;
     if (!['completed', 'expired'].includes(_publicSessionState.lifecycle) && effectiveCaptcha.enabled && effectiveCaptcha.siteKey
         && !sessionStorage.getItem(_publicStorageKeys.captchaPassed)) {
       const loading = document.getElementById('jspsych-loading-overlay');
@@ -1602,7 +1606,7 @@ const J8e = decideBranch;
     const _mturkTurkSubmitTo = _urlParams.get('turkSubmitTo');
     const _mturkIsPreview = _mturkAssignmentID === 'ASSIGNMENT_ID_NOT_AVAILABLE';
 
-    const effectiveRecruitment = _publicSessionState.configuration?.recruitmentConfig || {"platform":"none","prolificCompletionCode":""};
+    const effectiveRecruitment = _publicSessionState.configuration.recruitmentConfig;
     // MTurk preview mode: block experiment from starting
     if (effectiveRecruitment.platform === 'mturk' && _mturkIsPreview) {
       document.getElementById('jspsych-container').innerHTML =
@@ -1950,7 +1954,7 @@ const J8e = decideBranch;
 
         publicFinished = true;
         // --- Recruitment platform redirect ---
-        const recruitment = _publicSessionState.configuration?.recruitmentConfig || {"platform":"none","prolificCompletionCode":""};
+        const recruitment = _publicSessionState.configuration.recruitmentConfig;
         if (recruitment.platform === 'prolific') {
         if (_prolificPID && recruitment.prolificCompletionCode) {
           _setLoadingMsg('Redirecting to Prolific…');
@@ -1984,7 +1988,7 @@ const J8e = decideBranch;
     // Uncomment to see the json results after finishing a session experiment
     // jsPsych.data.displayData('csv');
 
-    if (['prolific', 'mturk'].includes((_publicSessionState.configuration?.recruitmentConfig || {"platform":"none","prolificCompletionCode":""}).platform)) {
+    if (['prolific', 'mturk'].includes(_publicSessionState.configuration.recruitmentConfig.platform)) {
     // Add platform IDs to all trials automatically (after initJsPsych)
     jsPsych.data.addProperties({
       prolific_pid: _prolificPID || "",
